@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 import hashlib
+from saveJson import load_user, save_user
+import re
 
 class LoginApp:
     def __init__(self, root):
@@ -18,7 +20,8 @@ class LoginApp:
     
     def hash_password(self, password):
         """Hashea la contraseña usando SHA-256"""
-        return 'pass-hash'
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        return hashed_password
     
     def create_widgets(self):
         # Frame principal
@@ -122,31 +125,53 @@ class LoginApp:
         info_frame = tk.Frame(main_frame, bg='#f0f0f0')
         info_frame.pack(pady=20)
         
-
         
     def signin(self):
+        print(self.users)
+        # Obtenemos informacion de los inputs
+        username = self.user_entry.get()
+        password = self.pass_entry.get()
+
+        # Si no hay informacion en el input rechaza todo
+        if not username or not password:
+                messagebox.showerror("Error", "Por favor, complete todos los campos")
+                return
+        hash_password = self.hash_password(password)
+        
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+            messagebox.showerror("Error", "La contraseña debe contener al menos un carácter especial")
+            return
+    
+        # Sin hash
+        # self.users[username] = password
+        self.users[username] = hash_password
+        print(self.users)
+        save_user(self.users, "user-db.json")
         return print("usuario registrado")
     
     def login(self):
-        """Verifica las credenciales del usuario"""
+    #Verifica las credenciales del usuario leyendo desde el JSON"
         username = self.user_entry.get().strip()
         password = self.pass_entry.get().strip()
-        
+
         if not username or not password:
             messagebox.showerror("Error", "Por favor, complete todos los campos")
             return
-        
-        # Verificar usuario y contraseña
-        # userJson = getUsersDB
-        if username in self.users:
+
+    # Cargar usuarios desde el archivo
+        users_from_file = load_user("user-db.json")
+
+    # Verificar usuario y contraseña
+        if username in users_from_file:
             hashed_password = self.hash_password(password)
-            if self.users[username] == hashed_password:
+            if users_from_file[username] == hashed_password:
                 messagebox.showinfo("Éxito", f"¡Bienvenido, {username}!")
                 self.open_dashboard(username)
             else:
                 messagebox.showerror("Error", "Contraseña incorrecta")
         else:
             messagebox.showerror("Error", "Usuario no encontrado")
+
     
     def clear_fields(self):
         """Limpia los campos de entrada"""
@@ -199,7 +224,7 @@ def main():
     screen_height = root.winfo_screenheight()
     x = (screen_width - window_width) // 2
     y = (screen_height - window_height) // 2
-    
+    root.geometry(f'{window_width}x{window_height}+{x}+{y}')
     
     # Iniciar aplicación
     app = LoginApp(root)
